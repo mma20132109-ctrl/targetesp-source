@@ -1,0 +1,40 @@
+name: Decompile TargetESP JAR
+
+on:
+  push:
+    branches:
+      - inspect/decompile-targetesp
+
+permissions:
+  contents: write
+
+jobs:
+  decompile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: inspect/decompile-targetesp
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Download CFR
+        run: curl -fsSL https://repo1.maven.org/maven2/org/benf/cfr/0.152/cfr-0.152.jar -o /tmp/cfr.jar
+      - name: Decompile original mod
+        run: |
+          mkdir -p /tmp/targetesp-decompiled
+          java -jar /tmp/cfr.jar "TargetEspmod-1.21.11 (1).jar" --outputdir /tmp/targetesp-decompiled --silent true
+          mkdir -p decompiled
+          cp -R /tmp/targetesp-decompiled/. decompiled/
+      - name: Commit decompiled sources
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add decompiled
+          if git diff --cached --quiet; then
+            echo "No decompiled output to commit"
+          else
+            git commit -m "Add decompiled TargetESP inspection sources"
+            git push origin HEAD:inspect/decompile-targetesp
+          fi
